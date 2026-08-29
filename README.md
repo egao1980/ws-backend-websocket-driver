@@ -36,7 +36,8 @@ WS_PROTOCOL_WSS=1 WS_PROTOCOL_WSS_CHILD=1 ros -e '(asdf:test-system "ws-backend-
 Owning-repo canned [`publish-source.yml`](https://github.com/egao1980/cl-repository/blob/main/.github/workflows/publish-source.yml):
 
 ```bash
-gh workflow run publish-checkout.yml -R egao1980/ws-backend-websocket-driver
+# GHCR write is still linked to ws-protocol (owning-repo publish 403).
+gh workflow run publish-checkout.yml -R egao1980/ws-protocol -f publish_backend=true
 ```
 
 ## License
