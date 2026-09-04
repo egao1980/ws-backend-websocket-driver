@@ -1,6 +1,6 @@
 (defsystem "ws-backend-websocket-driver"
-  :version "0.2.2"
-  :description "websocket-driver backend for ws-protocol"
+  :version "0.3.0"
+  :description "websocket-driver backend for ws-protocol (client + H1 Upgrade server)"
   :author "egao1980"
   :license "MIT"
   :depends-on ("ws-protocol" "websocket-driver-client" "event-emitter")
@@ -12,7 +12,8 @@
   :serial t
   :pathname "src"
   :components ((:file "package")
-               (:file "websocket-driver"))
+               (:file "websocket-driver")
+               (:file "server"))
   :in-order-to ((test-op (test-op "ws-backend-websocket-driver/tests"))))
 
 (defsystem "ws-backend-websocket-driver/tests"

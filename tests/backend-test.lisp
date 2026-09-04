@@ -41,3 +41,28 @@
         (ws:close conn :code 1000 :reason "bye")
         (ok (%wait (lambda () (or closed (eq (ready-state conn) :closed)))
                    :timeout 2.0))))))
+
+(deftest make-ws-server-echo
+  (let* ((backend (make-websocket-driver-backend))
+         (*ws-backend* backend)
+         (port (+ 19000 (random 2000)))
+         (server (make-ws-server backend :host "127.0.0.1" :port port
+                                 :path "/echo"
+                                 :on-connect
+                                 (lambda (conn)
+                                   (on-event conn :message
+                                             (lambda (msg)
+                                               (send-text conn msg))))))
+         (got nil))
+    (unwind-protect
+         (progn
+           (start-ws-server server)
+           (sleep 0.3)
+           (ok (ws-server-running-p server))
+           (ws:with-connection (conn (format nil "ws://127.0.0.1:~A/echo" port))
+             (ws:on conn :message (lambda (msg) (setf got msg)))
+             (ws:send conn "srv")
+             (ok (%wait (lambda () (equal got "srv")))))
+           (stop-ws-server server)
+           (ok (not (ws-server-running-p server))))
+      (ignore-errors (stop-ws-server server)))))
