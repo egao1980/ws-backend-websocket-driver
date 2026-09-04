@@ -1,6 +1,8 @@
 # ws-backend-websocket-driver
 
-[`websocket-driver`](https://github.com/fukamachi/websocket-driver) backend for [`ws-protocol`](https://github.com/egao1980/ws-protocol). RFC 6455 `:http/1.1` Upgrade only — not RFC 8441.
+[`websocket-driver`](https://github.com/fukamachi/websocket-driver) backend for [`ws-protocol`](https://github.com/egao1980/ws-protocol). RFC 6455 `:http/1.1` Upgrade **client + server** — not RFC 8441.
+
+Server: `ws:make-server` / `ws:accept` via Clack/Hunchentoot (`websocket-driver-server` soft-loaded). Peer canary: `parity/python/echo_client.py` (`websockets`).
 
 Product backends stay in their own repos. H2 Extended CONNECT is [`http-backend-async`](https://github.com/egao1980/http-backend-async); Windows H1 is [`http-backend-winhttp`](https://github.com/egao1980/http-backend-winhttp).
 
