@@ -18,6 +18,27 @@ jobs:
     with:
       system: ws-backend-websocket-driver
 
+  h2-server:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: egao1980/cl-repository/.github/actions/setup-lisp@main
+        with:
+          sbcl-version: ${{ env.SBCL_VERSION }}
+          roswell-version: ${{ env.ROSWELL_VERSION }}
+      - uses: egao1980/cl-repository/.github/actions/ci@main
+        with:
+          phase: install
+          system: ws-backend-websocket-driver
+          with: http2 http2/client http2/server/threaded http-backend-async event-backend-libuv cl-stack-ssl fast-websocket
+      - uses: egao1980/cl-repository/.github/actions/ci@main
+        with:
+          phase: test
+          system: ws-backend-websocket-driver
+
   wss-openssl:
     runs-on: ubuntu-latest
     container: ghcr.io/egao1980/cl-repository/ci-base:latest
