@@ -97,8 +97,9 @@
              :message "websocket-driver parser missing before deflate wrap"))
     (%set-driver-parser
      driver
-     (lambda (data &key (start 0) end)
-       (let ((end (or end (length data))))
+     (lambda (data &key start end)
+       (let ((start (or start 0))
+             (end (or end (length data))))
          (when (and (vectorp data) (< start end))
            (let ((b (aref data start)))
              (when (logtest #x40 b)
