@@ -3,13 +3,15 @@
   :description "websocket-driver backend for ws-protocol (H1 Upgrade + H2 Extended CONNECT server + deflate)"
   :author "egao1980"
   :license "MIT"
-  :depends-on ("ws-protocol" "websocket-driver-client" "event-emitter"
+  :depends-on ((:version "ws-protocol" "0.4.2")
+               "websocket-driver-client" "event-emitter"
                "compression-protocol" "compression-backend-chipz" "babel")
   :properties
   (:cl-repo
    (:ci (:with ("cl-stack-ssl" "fast-websocket" "http2"
                 "compression-protocol" "compression-backend-chipz")
-         :load-before-test ("cl+ssl" "cl-stack-ssl")
+         :load-before-test ("cl+ssl" "cl-stack-ssl" "http2/server/threaded"
+                            "fast-websocket")
          :record-versions (("cl-stack-ssl" . "CL_STACK_SSL_VERSION")))))
   :serial t
   :pathname "src"
