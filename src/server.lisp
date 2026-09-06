@@ -35,8 +35,8 @@
                               :ready-state :connecting
                               :role :server
                               :deflate-p accept-p)))
-    (%install-deflate-parser conn)
-    (%install-message-bridge conn)
+    (when accept-p
+      (%install-deflate-parser conn))
     conn))
 
 (defun %upgrade-app (backend path on-connect &key compression)

@@ -79,8 +79,8 @@
           ;; websocket-driver has no proxy kw — document gap; fail loudly.
           (error 'unsupported-operation :operation :proxy
                  :message "websocket-driver backend does not support :proxy yet"))
-        (%install-deflate-parser conn)
-        (%install-message-bridge conn)
+        (when (eq compression :deflate)
+          (%install-deflate-parser conn))
         (handler-case
             (multiple-value-bind (started resp)
                 (%with-captured-http-headers
@@ -134,5 +134,7 @@
 
 (defmethod on-event ((connection websocket-driver-connection) event handler)
   (if (eq event :message)
-      (push handler (%message-handlers connection))
+      (on :message (connection-driver connection)
+          (lambda (msg)
+            (funcall handler (%maybe-inflate-message connection msg))))
       (on event (connection-driver connection) handler)))

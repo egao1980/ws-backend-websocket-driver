@@ -42,11 +42,15 @@
   (or (find-symbol name :websocket-driver.ws.base)
       (error "websocket-driver.ws.base missing ~A" name)))
 
+(defun %parser-slot ()
+  (or (find-symbol "PARSER" :websocket-driver.ws.base)
+      (error "websocket-driver.ws.base::PARSER missing")))
+
 (defun %driver-parser (driver)
-  (funcall (symbol-function (%ws-base-sym "PARSER")) driver))
+  (slot-value driver (%parser-slot)))
 
 (defun %set-driver-parser (driver value)
-  (funcall (fdefinition (list 'setf (%ws-base-sym "PARSER"))) value driver))
+  (setf (slot-value driver (%parser-slot)) value))
 
 (defun %driver-socket (driver)
   (funcall (symbol-function (%ws-base-sym "SOCKET")) driver))
@@ -88,11 +92,14 @@
   "Strip RSV1 (and rewrite text→binary) so fast-websocket accepts the frame."
   (let* ((driver (connection-driver conn))
          (orig (%driver-parser driver)))
+    (unless (functionp orig)
+      (error 'ws-connection-error
+             :message "websocket-driver parser missing before deflate wrap"))
     (%set-driver-parser
      driver
      (lambda (data &key (start 0) end)
        (let ((end (or end (length data))))
-         (when (and data (< start end))
+         (when (and (vectorp data) (< start end))
            (let ((b (aref data start)))
              (when (logtest #x40 b)
                (let ((opcode (logand b #x0F)))
@@ -119,13 +126,6 @@
        (if text-p
            (babel:octets-to-string raw :encoding :utf-8)
            raw)))))
-
-(defun %install-message-bridge (conn)
-  (on :message (connection-driver conn)
-      (lambda (msg)
-        (let ((out (%maybe-inflate-message conn msg)))
-          (dolist (h (reverse (%message-handlers conn)))
-            (ignore-errors (funcall h out)))))))
 
 (defun %write-raw-frame (conn frame)
   (let ((socket (%driver-socket (connection-driver conn))))
