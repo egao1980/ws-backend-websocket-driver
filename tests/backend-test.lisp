@@ -60,6 +60,13 @@
     (ok (not (equalp raw enc)))
     (ok (equalp raw dec))))
 
+(deftest inflate-rfc7692-hello
+  "RFC 7692 §7.2.3.1 — chipz needs SYNC_FLUSH + a final empty block."
+  (let ((hello (coerce #(#xf2 #x48 #xcd #xc9 #xc9 #x07 #x00)
+                       '(vector (unsigned-byte 8)))))
+    (ok (equal "Hello" (babel:octets-to-string (inflate-message hello)
+                                              :encoding :utf-8)))))
+
 (deftest websocket-driver-compressions
   (let ((b (make-websocket-driver-backend)))
     (ok (equal '(:deflate) (backend-ws-compressions b)))

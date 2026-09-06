@@ -29,13 +29,19 @@
         (subseq raw 0 (- (length raw) 4))
         raw)))
 
+(defparameter +deflate-final-block+
+  ;; chipz requires BFINAL. SYNC_FLUSH (00 00 FF FF) alone is not enough;
+  ;; 03 00 is an empty static final block (zlib -MAX_WBITS workaround).
+  (coerce #(3 0) '(simple-array (unsigned-byte 8) (*))))
+
 (defun inflate-message (data)
-  "RFC 7692 decompress: append 00 00 FF FF, raw DEFLATE inflate."
+  "RFC 7692 decompress: append 00 00 FF FF plus a final empty block."
   (let* ((octets (%as-octets data))
          (n (length octets))
-         (padded (make-array (+ n 4) :element-type '(unsigned-byte 8))))
+         (padded (make-array (+ n 6) :element-type '(unsigned-byte 8))))
     (replace padded octets)
     (replace padded +deflate-sync-tail+ :start1 n)
+    (replace padded +deflate-final-block+ :start1 (+ n 4))
     (compression-protocol:decompress padded :algorithm :deflate)))
 
 (defun %ws-base-sym (name)
@@ -117,16 +123,20 @@
     ((not (%pending-compressed-p conn))
      msg)
     (t
-     (let* ((octets (if (stringp msg)
-                        (babel:string-to-octets msg :encoding :iso-8859-1)
-                        msg))
-            (raw (inflate-message octets))
-            (text-p (%pending-text-p conn)))
+     (let ((text-p (%pending-text-p conn)))
        (setf (%pending-compressed-p conn) nil
              (%pending-text-p conn) nil)
-       (if text-p
-           (babel:octets-to-string raw :encoding :utf-8)
-           raw)))))
+       (handler-case
+           (let* ((octets (if (stringp msg)
+                              (babel:string-to-octets msg :encoding :iso-8859-1)
+                              msg))
+                  (raw (inflate-message octets)))
+             (if text-p
+                 (babel:octets-to-string raw :encoding :utf-8)
+                 raw))
+         (error (c)
+           (error 'ws-protocol-error
+                  :message (format nil "permessage-deflate inflate failed: ~A" c))))))))
 
 (defun %write-raw-frame (conn frame)
   (let ((socket (%driver-socket (connection-driver conn))))
