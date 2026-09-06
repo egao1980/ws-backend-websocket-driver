@@ -14,8 +14,18 @@
   (declare (ignore backend))
   '(:http/1.1))
 
+(defmethod backend-ws-compressions ((backend websocket-driver-backend))
+  "RFC 7692 permessage-deflate via RSV1 wrap + chipz (not stock driver)."
+  (declare (ignore backend))
+  '(:deflate))
+
 (defclass websocket-driver-connection (ws-connection)
-  ((driver :initarg :driver :reader connection-driver)))
+  ((driver :initarg :driver :reader connection-driver)
+   (role :initarg :role :accessor connection-role :initform :client)
+   (deflate-p :initarg :deflate-p :accessor connection-deflate-p :initform nil)
+   (pending-compressed-p :initform nil :accessor %pending-compressed-p)
+   (pending-text-p :initform nil :accessor %pending-text-p)
+   (message-handlers :initform nil :accessor %message-handlers)))
 
 (defun %alist-headers (headers)
   "Normalize to (string . string) for websocket-driver additional-headers."
@@ -37,7 +47,8 @@
       (t rs))))
 
 (defmethod connect ((backend websocket-driver-backend) client url &key transport)
-  (let ((resolved (resolve-ws-transport backend client :transport transport)))
+  (let ((resolved (resolve-ws-transport backend client :transport transport))
+        (compression (resolve-ws-compression backend client)))
     (unless (eq resolved :http/1.1)
       (error 'ws-transport-not-available
              :requested transport
@@ -46,41 +57,61 @@
     (let* ((headers (inject-auth-headers
                      (%alist-headers (ws-client-headers client))
                      :auth (ws-client-auth client)))
-           (protocols (ws-client-protocols client))
-           (driver (apply #'websocket-driver:make-client
-                          url
-                          (append
-                           (when protocols
-                             (list :accept-protocols protocols))
-                           (when headers
-                             (list :additional-headers headers)))))
-           (conn (make-instance 'websocket-driver-connection
-                                :driver driver
-                                :url url
-                                :ready-state :connecting)))
-      (when (ws-client-proxy client)
-        ;; websocket-driver has no proxy kw — document gap; fail loudly.
-        (error 'unsupported-operation :operation :proxy
-               :message "websocket-driver backend does not support :proxy yet"))
-      (handler-case
-          (progn
-            (apply #'websocket-driver:start-connection
-                   driver
-                   :verify (ws-client-verify client)
-                   (when (ws-client-ca-path client)
-                     (list :ca-path (ws-client-ca-path client))))
-            (setf (ws-protocol:%connection-ready-state conn) :open)
-            conn)
-        (error (e)
-          (ignore-errors (websocket-driver:close-connection driver))
-          (error 'ws-connection-error
-                 :message (format nil "WebSocket connect failed: ~A" e)))))))
+           (protocols (ws-client-protocols client)))
+      (when (eq compression :deflate)
+        (setf headers
+              (acons "sec-websocket-extensions" (permessage-deflate-offer)
+                     (remove "sec-websocket-extensions" headers
+                             :key #'car :test #'string-equal))))
+      (let* ((driver (apply #'websocket-driver:make-client
+                            url
+                            (append
+                             (when protocols
+                               (list :accept-protocols protocols))
+                             (when headers
+                               (list :additional-headers headers)))))
+             (conn (make-instance 'websocket-driver-connection
+                                  :driver driver
+                                  :url url
+                                  :ready-state :connecting
+                                  :role :client)))
+        (when (ws-client-proxy client)
+          ;; websocket-driver has no proxy kw — document gap; fail loudly.
+          (error 'unsupported-operation :operation :proxy
+                 :message "websocket-driver backend does not support :proxy yet"))
+        (%install-deflate-parser conn)
+        (%install-message-bridge conn)
+        (handler-case
+            (multiple-value-bind (started resp)
+                (%with-captured-http-headers
+                 (lambda ()
+                   (apply #'websocket-driver:start-connection
+                          driver
+                          :verify (ws-client-verify client)
+                          (when (ws-client-ca-path client)
+                            (list :ca-path (ws-client-ca-path client))))))
+              (declare (ignore started))
+              (when (eq compression :deflate)
+                (setf (connection-deflate-p conn)
+                      (and (permessage-deflate-accepted-p
+                            (%header-get resp "sec-websocket-extensions"))
+                           t)))
+              (setf (ws-protocol:%connection-ready-state conn) :open)
+              conn)
+          (error (e)
+            (ignore-errors (websocket-driver:close-connection driver))
+            (error 'ws-connection-error
+                   :message (format nil "WebSocket connect failed: ~A" e))))))))
 
 (defmethod send-text ((connection websocket-driver-connection) text &key)
-  (websocket-driver:send-text (connection-driver connection) text))
+  (if (connection-deflate-p connection)
+      (%send-deflated connection text :text)
+      (websocket-driver:send-text (connection-driver connection) text)))
 
 (defmethod send-binary ((connection websocket-driver-connection) octets &key)
-  (websocket-driver:send-binary (connection-driver connection) octets))
+  (if (connection-deflate-p connection)
+      (%send-deflated connection octets :binary)
+      (websocket-driver:send-binary (connection-driver connection) octets)))
 
 (defmethod ping ((connection websocket-driver-connection) &optional payload &key)
   (websocket-driver:send-ping (connection-driver connection) payload))
@@ -102,4 +133,6 @@
     t))
 
 (defmethod on-event ((connection websocket-driver-connection) event handler)
-  (on event (connection-driver connection) handler))
+  (if (eq event :message)
+      (push handler (%message-handlers connection))
+      (on event (connection-driver connection) handler)))
