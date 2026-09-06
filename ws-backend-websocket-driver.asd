@@ -8,7 +8,7 @@
                "compression-protocol" "compression-backend-chipz" "babel")
   :properties
   (:cl-repo
-   (:ci (:with ("cl-stack-ssl" "fast-websocket"
+   (:ci (:with ("ws-protocol" "cl-stack-ssl" "fast-websocket"
                 "compression-protocol" "compression-backend-chipz")
          :load-before-test ("cl+ssl" "cl-stack-ssl" "fast-websocket")
          :record-versions (("cl-stack-ssl" . "CL_STACK_SSL_VERSION")))))

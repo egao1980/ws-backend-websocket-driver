@@ -17,7 +17,7 @@ jobs:
     uses: egao1980/cl-repository/.github/workflows/test-system.yml@main
     with:
       system: ws-backend-websocket-driver
-      extra-with: cl-stack-ssl fast-websocket
+      extra-with: ws-protocol cl-stack-ssl fast-websocket
 
   h2-server:
     continue-on-error: true
@@ -64,7 +64,7 @@ jobs:
         with:
           phase: install
           system: ws-backend-websocket-driver
-          with: cl-stack-ssl
+          with: ws-protocol cl-stack-ssl
       - uses: egao1980/cl-repository/.github/actions/ci@main
         with:
           phase: test
