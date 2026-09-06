@@ -17,7 +17,7 @@ jobs:
     uses: egao1980/cl-repository/.github/workflows/test-system.yml@main
     with:
       system: ws-backend-websocket-driver
-      extra-with: anaphora gzip-stream puri
+      extra-with: cl-stack-ssl fast-websocket
 
   h2-server:
     continue-on-error: true
@@ -35,7 +35,7 @@ jobs:
         with:
           phase: install
           system: ws-backend-websocket-driver
-          with: http2 http-backend-async event-backend-libuv cl-stack-ssl fast-websocket anaphora gzip-stream puri
+          with: http2 http-backend-async event-backend-libuv cl-stack-ssl fast-websocket
       - uses: egao1980/cl-repository/.github/actions/ci@main
         with:
           phase: test
@@ -64,7 +64,7 @@ jobs:
         with:
           phase: install
           system: ws-backend-websocket-driver
-          with: anaphora gzip-stream puri
+          with: cl-stack-ssl
       - uses: egao1980/cl-repository/.github/actions/ci@main
         with:
           phase: test
