@@ -33,7 +33,7 @@ jobs:
         with:
           phase: install
           system: ws-backend-websocket-driver
-          with: http2 http2/client http2/server/threaded http-backend-async event-backend-libuv cl-stack-ssl fast-websocket
+          with: http2 http-backend-async event-backend-libuv cl-stack-ssl fast-websocket
       - uses: egao1980/cl-repository/.github/actions/ci@main
         with:
           phase: test
