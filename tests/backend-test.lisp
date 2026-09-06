@@ -42,6 +42,65 @@
         (ok (%wait (lambda () (or closed (eq (ready-state conn) :closed)))
                    :timeout 2.0))))))
 
+(deftest echo-binary-roundtrip
+  (with-echo-server ()
+    (let* ((*ws-backend* (make-websocket-driver-backend))
+           (payload (coerce #(0 1 2 255 9) '(vector (unsigned-byte 8))))
+           (got nil))
+      (ws:with-connection (conn (echo-url))
+        (ws:on conn :message (lambda (msg) (setf got msg)))
+        (ws:send conn payload :type :binary)
+        (ok (%wait (lambda () (equalp got payload))))
+        (ok (equalp payload got))))))
+
+(deftest deflate-message-roundtrip
+  (let* ((raw (babel:string-to-octets "hello-deflate" :encoding :utf-8))
+         (enc (deflate-message raw))
+         (dec (inflate-message enc)))
+    (ok (not (equalp raw enc)))
+    (ok (equalp raw dec))))
+
+(deftest inflate-rfc7692-hello
+  "RFC 7692 §7.2.3.1 — chipz needs SYNC_FLUSH + a final empty block."
+  (let ((hello (coerce #(#xf2 #x48 #xcd #xc9 #xc9 #x07 #x00)
+                       '(vector (unsigned-byte 8)))))
+    (ok (equal "Hello" (babel:octets-to-string (inflate-message hello)
+                                              :encoding :utf-8)))))
+
+(deftest websocket-driver-compressions
+  (let ((b (make-websocket-driver-backend)))
+    (ok (equal '(:deflate) (backend-ws-compressions b)))
+    (ok (backend-supports-ws-compression-p b :deflate))))
+
+(deftest make-ws-server-deflate-echo
+  (let* ((backend (make-websocket-driver-backend))
+         (*ws-backend* backend)
+         (port (+ 19000 (random 2000)))
+         (server (make-ws-server backend :host "127.0.0.1" :port port
+                                 :path "/echo"
+                                 :compression :deflate
+                                 :on-connect
+                                 (lambda (conn)
+                                   (on-event conn :message
+                                             (lambda (msg)
+                                               (if (stringp msg)
+                                                   (send-text conn msg)
+                                                   (send-binary conn msg)))))))
+         (got nil))
+    (unwind-protect
+         (progn
+           (start-ws-server server)
+           (sleep 0.3)
+           (ok (ws-server-running-p server))
+           (ws:with-connection (conn (format nil "ws://127.0.0.1:~A/echo" port)
+                                     :compression :deflate)
+             (ok (connection-deflate-p conn))
+             (ws:on conn :message (lambda (msg) (setf got msg)))
+             (ws:send conn "deflate-ping")
+             (ok (%wait (lambda () (equal got "deflate-ping")))))
+           (stop-ws-server server))
+      (ignore-errors (stop-ws-server server)))))
+
 (deftest make-ws-server-echo
   (let* ((backend (make-websocket-driver-backend))
          (*ws-backend* backend)

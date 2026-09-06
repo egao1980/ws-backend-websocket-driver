@@ -1,6 +1,6 @@
 # ws-backend-websocket-driver
 
-[`websocket-driver`](https://github.com/fukamachi/websocket-driver) backend for [`ws-protocol`](https://github.com/egao1980/ws-protocol). RFC 6455 `:http/1.1` Upgrade **client + server**, plus RFC 8441 Extended CONNECT **server** (`:transport :http/2`, TLS).
+[`websocket-driver`](https://github.com/fukamachi/websocket-driver) backend for [`ws-protocol`](https://github.com/egao1980/ws-protocol). RFC 6455 `:http/1.1` Upgrade **client + server**, plus RFC 8441 Extended CONNECT **server** (`:transport :http/2`, TLS). RFC 7692 **permessage-deflate** (`:compression :deflate`) is a thin extension handshake + RSV1 wrap; inflate/deflate uses `compression-protocol` / chipz (the stock driver has no extension hook).
 
 Server: `ws:make-server` / `ws:accept` via Clack/Hunchentoot (H1) or zellerin `http2/server` (H2, advertises `SETTINGS_ENABLE_CONNECT_PROTOCOL`). H2 client remains [`http-backend-async`](https://github.com/egao1980/http-backend-async). Windows H1 is [`http-backend-winhttp`](https://github.com/egao1980/http-backend-winhttp). `http2/server/threaded` may not load on Windows.
 

@@ -16,23 +16,36 @@
 (defun %call (package name &rest args)
   (apply (%sym package name) args))
 
-(defmethod accept ((backend websocket-driver-backend) env &key)
+(defmethod accept ((backend websocket-driver-backend) env &key compression)
   (%ensure-ws-server-deps)
-  (let* ((make-server (%sym :websocket-driver "MAKE-SERVER"))
-         (driver (funcall make-server env))
-         (path (or (getf env :path-info) (getf env :request-uri) "")))
-    (make-instance 'websocket-driver-connection
-                   :driver driver
-                   :url path
-                   :ready-state :connecting)))
+  (let* ((want (normalize-ws-compression compression))
+         (offer (env-sec-websocket-extensions env))
+         (accept-p (and (eq want :deflate)
+                        (permessage-deflate-accepted-p offer)))
+         (extra (when accept-p
+                  (list (cons "sec-websocket-extensions"
+                              (permessage-deflate-response)))))
+         (make-server (%sym :websocket-driver "MAKE-SERVER"))
+         (driver (apply make-server env
+                        (when extra (list :additional-headers extra))))
+         (path (or (getf env :path-info) (getf env :request-uri) ""))
+         (conn (make-instance 'websocket-driver-connection
+                              :driver driver
+                              :url path
+                              :ready-state :connecting
+                              :role :server
+                              :deflate-p accept-p)))
+    (when accept-p
+      (%install-deflate-parser conn))
+    conn))
 
-(defun %upgrade-app (backend path on-connect)
+(defun %upgrade-app (backend path on-connect &key compression)
   (lambda (env)
     (let ((req (or (getf env :path-info) (getf env :request-uri) "")))
       (if (or (null path)
               (string= req path)
               (and (stringp req) (search path req)))
-          (let ((conn (accept backend env)))
+          (let ((conn (accept backend env :compression compression)))
             (when on-connect
               (funcall on-connect conn))
             (lambda (responder)
@@ -43,9 +56,11 @@
 
 (defmethod make-ws-server ((backend websocket-driver-backend)
                            &key (host "127.0.0.1") port (path "/echo")
-                             ssl-cert ssl-key on-connect (transport :auto))
+                             ssl-cert ssl-key on-connect (transport :auto)
+                             compression)
   (let* ((want (normalize-ws-transport transport))
-         (resolved (if (eq want :auto) :http/1.1 want)))
+         (resolved (if (eq want :auto) :http/1.1 want))
+         (comp (normalize-ws-compression compression)))
     (when (and (eq resolved :http/2) (not (h2-ws-server-available-p)))
       (error 'ws-transport-not-available
              :requested :http/2
@@ -54,10 +69,11 @@
                                  :host host
                                  :port (or port 0)
                                  :path path
-                                 :on-connect on-connect)))
+                                 :on-connect on-connect
+                                 :compression comp)))
       (setf (ws-server-impl server)
             (list :backend backend :ssl-cert ssl-cert :ssl-key ssl-key
-                  :transport resolved))
+                  :transport resolved :compression comp))
       server)))
 
 (defmethod start-ws-server ((server ws-server) &key (background t))
@@ -73,7 +89,10 @@
                (ssl-key (getf impl :ssl-key))
                (app (%upgrade-app backend
                                   (ws-server-path server)
-                                  (ws-server-on-connect server)))
+                                  (ws-server-on-connect server)
+                                  :compression
+                                  (or (getf impl :compression)
+                                      (ws-server-compression server))))
                (args (append (list app
                                    :server :hunchentoot
                                    :address (ws-server-host server)
