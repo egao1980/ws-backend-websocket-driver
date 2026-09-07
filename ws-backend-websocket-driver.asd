@@ -1,5 +1,5 @@
 (defsystem "ws-backend-websocket-driver"
-  :version "0.4.2"
+  :version "0.4.3"
   :description "websocket-driver backend for ws-protocol (H1 Upgrade + H2 Extended CONNECT server + deflate)"
   :author "egao1980"
   :license "MIT"
@@ -17,6 +17,7 @@
   :pathname "src"
   :components ((:file "package")
                (:file "websocket-driver")
+               (:file "ssl-client-patch")
                (:file "deflate")
                (:file "h2-server")
                (:file "server"))
