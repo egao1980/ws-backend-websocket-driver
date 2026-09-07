@@ -8,9 +8,10 @@
                "compression-protocol" "compression-backend-chipz" "babel")
   :properties
   (:cl-repo
-   (:ci (:with ("ws-protocol" "cl-stack-ssl" "fast-websocket"
+   (:ci (:with ("ws-protocol" "cl-stack-ssl" "fast-websocket" "http2"
                 "compression-protocol" "compression-backend-chipz")
-         :load-before-test ("cl+ssl" "cl-stack-ssl" "fast-websocket")
+         :load-before-test ("cl+ssl" "cl-stack-ssl" "http2/server/threaded"
+                            "fast-websocket")
          :record-versions (("cl-stack-ssl" . "CL_STACK_SSL_VERSION")))))
   :serial t
   :pathname "src"

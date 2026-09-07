@@ -17,11 +17,28 @@ jobs:
     uses: egao1980/cl-repository/.github/workflows/test-system.yml@main
     with:
       system: ws-backend-websocket-driver
-      extra-with: ws-protocol cl-stack-ssl fast-websocket
+      extra-with: ws-protocol cl-stack-ssl fast-websocket http2
 
-  # h2-server parked: http2 OCI pulls mgl-pax-bootstrap, whose tarball
-  # poisons ASDF with an unloadable mgl-pax.asd (autoload:autoload-system).
-  # Re-add when dref + real mgl-pax are on cl-systems.
+  h2-server:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: egao1980/cl-repository/.github/actions/setup-lisp@main
+        with:
+          sbcl-version: ${{ env.SBCL_VERSION }}
+          roswell-version: ${{ env.ROSWELL_VERSION }}
+      - uses: egao1980/cl-repository/.github/actions/ci@main
+        with:
+          phase: install
+          system: ws-backend-websocket-driver
+          with: ws-protocol http2 http-backend-async event-backend-libuv cl-stack-ssl fast-websocket
+      - uses: egao1980/cl-repository/.github/actions/ci@main
+        with:
+          phase: test
+          system: ws-backend-websocket-driver
 
   wss-openssl:
     continue-on-error: true
