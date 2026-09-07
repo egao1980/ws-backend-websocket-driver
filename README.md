@@ -19,6 +19,11 @@ Local echo demo: `ros -l scripts/demo.lisp`. Recipes: [cl-stack websocket cookbo
 
 `wss://` uses cl+ssl (driver); production TLS = `cl-stack-ssl` overlay.
 
+Stock websocket-driver `0.2.0` frees the per-connect `SSL_CTX` (`:auto-free-p t`)
+and double-closes the SSL stream on the read thread — SIGSEGV against Node/Python
+TLS ([fukamachi/websocket-driver#73](https://github.com/fukamachi/websocket-driver/issues/73)).
+`src/ssl-client-patch.lisp` applies the unmerged #74 fix at load.
+
 ## Install / test
 
 CI: canned [`cl-repository`](https://github.com/egao1980/cl-repository) (`test-system.yml` / `setup-client` + `ci`). Deps from `ghcr.io/egao1980/cl-systems`.
