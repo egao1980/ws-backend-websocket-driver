@@ -22,6 +22,11 @@
               (skip "could not instantiate h2-ws-server-connection")
               (ok (eql 1 (cdr (assoc :enable-connect-protocol settings)))))))))
 
+(deftest h2-ws-connection-deflate-p-is-nil
+  "H2 accept does not negotiate permessage-deflate; accessor must still apply."
+  (let ((conn (make-instance 'h2-ws-connection :url "/echo")))
+    (ok (not (connection-deflate-p conn)))))
+
 (deftest make-ws-server-http2-requires-certs-on-start
   (if (not (h2-ws-server-available-p))
       (skip "http2/server/threaded or fast-websocket not loadable")

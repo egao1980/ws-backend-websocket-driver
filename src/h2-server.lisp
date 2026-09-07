@@ -42,7 +42,9 @@
   ((h2-stream :initarg :h2-stream :accessor h2-ws-h2-stream)
    (parser :initform nil :accessor h2-ws-parser)
    (handlers :initform (make-hash-table :test #'eq) :accessor h2-ws-handlers)
-   (closed-p :initform nil :accessor h2-ws-closed-p)))
+   (closed-p :initform nil :accessor h2-ws-closed-p)
+   ;; H2 Extended CONNECT does not negotiate RFC 7692 yet.
+   (deflate-p :initarg :deflate-p :accessor connection-deflate-p :initform nil)))
 
 (defun %h2-ws-fire (conn event &rest args)
   (let ((fn (gethash event (h2-ws-handlers conn))))
