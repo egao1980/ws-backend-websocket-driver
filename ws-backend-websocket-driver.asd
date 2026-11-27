@@ -1,10 +1,11 @@
 (defsystem "ws-backend-websocket-driver"
-  :version "0.4.3"
+  :version "0.4.4"
   :description "websocket-driver backend for ws-protocol (H1 Upgrade + H2 Extended CONNECT server + deflate)"
   :author "egao1980"
   :license "MIT"
   :depends-on ((:version "ws-protocol" "0.4.2")
-               "websocket-driver-client" "event-emitter"
+               "websocket-driver-client" "event-emitter" "usocket"
+               "bordeaux-threads" "trivial-garbage"
                "compression-protocol" "compression-backend-chipz" "babel")
   :properties
   (:cl-repo

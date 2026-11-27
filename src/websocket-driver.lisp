@@ -119,10 +119,10 @@
 (defmethod close-connection ((connection websocket-driver-connection)
                              &key code reason)
   (let ((driver (connection-driver connection)))
-    ;; Idempotent: driver may destroy its read thread; a second close
-    ;; (with-connection unwind after explicit ws:close) signals
-    ;; bordeaux-threads "Cannot destroy thread because it already exited"
-    ;; on some platforms (seen on darwin CI).
+    ;; Idempotent: a second close (with-connection unwind after an explicit
+    ;; ws:close) is a no-op. The driver close stops its read thread
+    ;; cooperatively (ssl-client-patch.lisp, #11); a stuck reader is reported
+    ;; with the warning READ-THREAD-JOIN-TIMEOUT, which passes through here.
     (unless (eq (ws-protocol:%connection-ready-state connection) :closed)
       (ignore-errors
         (websocket-driver:close-connection

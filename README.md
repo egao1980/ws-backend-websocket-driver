@@ -24,6 +24,16 @@ and double-closes the SSL stream on the read thread — SIGSEGV against Node/Pyt
 TLS ([fukamachi/websocket-driver#73](https://github.com/fukamachi/websocket-driver/issues/73)).
 `src/ssl-client-patch.lisp` applies the unmerged #74 fix at load.
 
+Stock client `close-connection` also kills the read thread with
+`bt2:destroy-thread`, an asynchronous unwind that can leave a malloc lock held
+by a dead thread (#11: on macOS 26 the next `fork` dies with SIGKILL). The
+patched close is cooperative: it marks the client `:closed`, `shutdown(2)`s the
+socket so the reader reads EOF, and waits up to
+`ws-backend-websocket-driver:*read-thread-join-timeout*` (5 s) for it. The
+reader closes the socket as it exits. A reader still inside a handler past the
+timeout is never killed: close signals the warning `read-thread-join-timeout`
+and returns.
+
 ## Install / test
 
 CI: canned [`cl-repository`](https://github.com/egao1980/cl-repository) (`test-system.yml` / `setup-client` + `ci`). Deps from `ghcr.io/egao1980/cl-systems`.
