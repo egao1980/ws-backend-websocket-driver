@@ -1,10 +1,11 @@
 (defsystem "ws-backend-websocket-driver"
-  :version "0.4.3"
+  :version "0.4.4"
   :description "websocket-driver backend for ws-protocol (H1 Upgrade + H2 Extended CONNECT server + deflate)"
   :author "egao1980"
   :license "MIT"
   :depends-on ((:version "ws-protocol" "0.4.2")
-               "websocket-driver-client" "event-emitter"
+               "websocket-driver-client" "event-emitter" "usocket"
+               "bordeaux-threads" "trivial-garbage"
                "compression-protocol" "compression-backend-chipz" "babel")
   :properties
   (:cl-repo
@@ -26,13 +27,15 @@
 (defsystem "ws-backend-websocket-driver/tests"
   :depends-on ("ws-backend-websocket-driver" "rove"
                "websocket-driver" "clack" "clack-handler-hunchentoot"
-               "hunchentoot" "bordeaux-threads" "babel")
+               "hunchentoot" "bordeaux-threads" "babel"
+               "usocket" "fast-websocket")
   :pathname "tests"
   :serial t
   :components ((:file "package")
                (:file "echo-fixture")
                (:file "backend-test")
                (:file "transport-test")
+               (:file "close-test")
                (:file "wss-test")
                (:file "h2-server-test"))
   :perform (test-op (o c)

@@ -62,7 +62,12 @@
         (ws:send conn "insecure-ok")
         (setf pass (and pass (ok (%wait (lambda () (equal got "insecure-ok"))
                                        :timeout 5.0))))
-        (setf pass (and pass (ok (equal "insecure-ok" got))))))
+        (setf pass (and pass (ok (equal "insecure-ok" got)))))
+      ;; #11 over TLS: close mid-stream (shutdown(2) under cl+ssl), then fork.
+      (let ((counts (%busy-close-loop 100 (echo-url :path "/flood" :host "127.0.0.1")
+                                      :verify nil)))
+        (setf pass (and pass (ok (%all-zero-p counts)
+                                 (format nil "WSS busy close: failure counts ~S" counts))))))
     (format t "~&WSS-SMOKE assertions ~A~%" (if pass "ok" "FAILED"))
     pass))
 

@@ -8,6 +8,10 @@
            #:deflate-message
            #:inflate-message
            #:h2-ws-server-available-p
-           #:h2-ws-connection))
+           #:h2-ws-connection
+           #:*read-thread-join-timeout*
+           #:read-thread-join-timeout
+           #:read-thread-join-timeout-thread
+           #:read-thread-join-timeout-seconds))
 
 (in-package #:ws-backend-websocket-driver)
