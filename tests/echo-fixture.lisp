@@ -7,16 +7,38 @@
 (defvar *echo-port* nil)
 (defvar *echo-ssl* nil)
 
+;;; /flood: CDP-screencast-sized text frames.
+(defparameter *flood-payloads*
+  (map 'vector
+       (lambda (n)
+         (format nil "{\"method\":\"Page.screencastFrame\",\"params\":{\"data\":\"~A\"}}"
+                 (make-string n :initial-element #\A)))
+       '(200 4000 30000 120000)))
+
+(defun %flood (ws)
+  "Send frames until the client goes away (a failed send marks WS :CLOSED)."
+  (loop while (eq (websocket-driver:ready-state ws) :open)
+        do (websocket-driver:send
+            ws (aref *flood-payloads* (random (length *flood-payloads*))))))
+
+(defun %echo-route (path)
+  (when (stringp path)
+    (cond ((search "/flood" path) :flood)   ; any message → frames until close
+          ((search "/echo" path) :echo))))
+
 (defun %echo-app (env)
-  (let ((path (or (getf env :path-info)
-                  (getf env :request-uri)
-                  "")))
-    (if (or (string= path "/echo")
-            (and (stringp path) (search "/echo" path)))
+  (let ((route (%echo-route (or (getf env :path-info)
+                                (getf env :request-uri)
+                                ""))))
+    (if route
         (let ((ws (websocket-driver:make-server env)))
           (websocket-driver:on :message ws
-                               (lambda (message)
-                                 (websocket-driver:send ws message)))
+                               (ecase route
+                                 (:echo (lambda (message)
+                                          (websocket-driver:send ws message)))
+                                 (:flood (lambda (message)
+                                           (declare (ignore message))
+                                           (%flood ws)))))
           (lambda (responder)
             (declare (ignore responder))
             (websocket-driver:start-connection ws)))

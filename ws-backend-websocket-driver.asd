@@ -27,13 +27,15 @@
 (defsystem "ws-backend-websocket-driver/tests"
   :depends-on ("ws-backend-websocket-driver" "rove"
                "websocket-driver" "clack" "clack-handler-hunchentoot"
-               "hunchentoot" "bordeaux-threads" "babel")
+               "hunchentoot" "bordeaux-threads" "babel"
+               "usocket" "fast-websocket")
   :pathname "tests"
   :serial t
   :components ((:file "package")
                (:file "echo-fixture")
                (:file "backend-test")
                (:file "transport-test")
+               (:file "close-test")
                (:file "wss-test")
                (:file "h2-server-test"))
   :perform (test-op (o c)
