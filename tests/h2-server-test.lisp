@@ -2,6 +2,11 @@
 
 (defun %h2-live-deps ()
   (and (h2-ws-server-available-p)
+       ;; The async H2 client runs on http2/client. Load it by name: the
+       ;; HTTP2/CLIENT package already exists (http2/server/threaded made it),
+       ;; and http-backend-async <= 0.2.32 takes that for the loaded system
+       ;; (egao1980/http-backend-async#93).
+       (ignore-errors (asdf:load-system "http2/client") t)
        (ignore-errors (asdf:load-system "http-backend-async") t)
        (ignore-errors (asdf:load-system "event-backend-libuv") t)
        (ignore-errors (asdf:load-system "cl-stack-ssl") t)))
